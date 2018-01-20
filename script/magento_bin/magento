@@ -1,0 +1,7 @@
+#! /bin/bash
+#
+# Use magento cli with right user inside docker container
+#
+# Author: nkandel@altima-agency.com
+
+docker exec -it git_php_1 su - www-data -s /bin/bash -c "/var/www/bin/magento $@"

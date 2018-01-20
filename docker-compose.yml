@@ -1,0 +1,75 @@
+version: '2'
+
+services:
+
+    web:
+        image: nginx:latest
+        hostname: magento2.loc
+        volumes:
+            # TODO: ./magento2/src can be a named volume
+            - ./magento2/src:/var/www
+            - ./conf/nginx_https/nginx.conf:/etc/nginx/nginx.conf
+            - ./conf/nginx_https/site.conf:/etc/nginx/conf.d/default.conf
+            - ./conf/nginx_https/server.crt:/etc/nginx/cert.crt
+            - ./conf/nginx_https/server.key:/etc/nginx/cert.key
+        depends_on:
+            - app
+
+    app:
+        image: httpd:2.4-alpine
+        volumes:
+            - ./magento2/src:/var/www
+            - ./conf/apache2.4/httpd.conf:/usr/local/apache2/conf/httpd.conf
+            - ./conf/apache2.4/extra:/usr/local/apache2/conf/extra
+        depends_on:
+            - php
+
+    php:
+        image: nexus.altima.fr/php70-fpm-magento:1.1.1
+        volumes:
+            - ./magento2/src:/var/www
+            - ./conf/crontab:/etc/cron.d
+            - ./conf/composer/auth.json:/root/.composer/auth.json
+            - ./script/magento_installer:/script/magento_installer
+            - ./script/php-fpm/run.sh:/root/run.sh
+        depends_on:
+            - db
+            - cache
+        environment:
+            - M2SETUP_INSTALL_DB=true
+            - M2SETUP_DB_HOST=db
+            - M2SETUP_DB_NAME=magento
+            - M2SETUP_DB_USER=magento
+            - M2SETUP_DB_PASSWORD=magento
+            - M2SETUP_BASE_URL=https://magento2.loc/
+            - M2SETUP_SECURE_BASE_URL=https://magento2.loc/
+            - M2SETUP_BACKEND_FRONTNAME=admin
+            - M2SETUP_ADMIN_FIRSTNAME=Admin
+            - M2SETUP_ADMIN_LASTNAME=Magento2
+            - M2SETUP_ADMIN_EMAIL=nkandel@altima-agency.com
+            - M2SETUP_ADMIN_USER=admin
+            - M2SETUP_ADMIN_PASSWORD=magent2
+            - M2SETUP_VERSION=2.2.*
+            - M2SETUP_UID=1000
+            - M2SETUP_GID=www-data
+            - MAGENTO_ROOT=/var/www
+            #- M2SETUP_USE_SAMPLE_DATA=true
+
+    db:
+       image: percona
+       volumes:
+           - ./data/mysql:/var/lib/mysql
+           #- ./magento2/dump:/tmp/dump
+       environment:
+           - MYSQL_ROOT_PASSWORD=root
+           - MYSQL_USER=magento
+           - MYSQL_PASSWORD=magento
+           - MYSQL_DATABASE=magento
+
+    cache:
+        image: redis
+
+    mail:
+        image: jderusse/mailcatcher
+        hostname: mail
+
